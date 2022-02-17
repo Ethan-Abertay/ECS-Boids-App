@@ -28,7 +28,7 @@ private:
 	sf::RenderWindow* window = 0;
 	sf::Event e;
 	ECS* ecs = 0;
-	sf::RectangleShape rectangle;
+	sf::CircleShape circle;
 	sf::Text fps_text;
 	sf::Font arialFont;
 

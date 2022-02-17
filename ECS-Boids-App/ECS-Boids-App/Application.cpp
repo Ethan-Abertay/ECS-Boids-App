@@ -4,7 +4,7 @@
 Application::Application()
 {
 	// Create window
-	window = new sf::RenderWindow(sf::VideoMode(800, 800), "Collision App");
+	window = new sf::RenderWindow(sf::VideoMode(2560, 1440), "Collision App", sf::Style::Fullscreen);
 
 	// srand
 	srand(time(0));
@@ -31,13 +31,13 @@ Application::Application()
 
 	const float width = window->getSize().x;
 	const float height = window->getSize().y;
-	const float maxVel = 100.f;
+	const float maxVel = 300.f;
 	const float maxAcc = 25.f;
 	const float minSize = 5.f;
 	const float maxSize = 10.f;
 
 	// Iniitalise entities
-	for (int i = 0; i < 3000; ++i)
+	for (int i = 0; i < 1000; ++i)
 	{
 		// Create entity - assign comps
 		auto id = ecs->createEntity();
@@ -48,7 +48,8 @@ Application::Application()
 		transform->position = sf::Vector2f(randRange(0, width), randRange(0, height));
 		transform->velocity = sf::Vector2f(randRange(-maxVel, maxVel), randRange(-maxVel, maxVel));
 		//transform->acceleration = sf::Vector2f(randRange(-maxAcc, maxAcc), randRange(-maxAcc, maxAcc));
-		transform->size = sf::Vector2f(randRange(minSize, maxSize), randRange(minSize, maxSize));
+		transform->radius = 5.f;
+		//transform->size = sf::Vector2f(randRange(minSize, maxSize), randRange(minSize, maxSize));
 	}
 
 	//auto id = ecs->createEntity();
@@ -66,9 +67,9 @@ Application::Application()
 	//transform->size = sf::Vector2f(50, 50);
 
 	// Create rectangle asset
-	rectangle.setOutlineColor(sf::Color::Red);
-	rectangle.setFillColor(sf::Color::White);
-	rectangle.setOutlineThickness(0);
+	circle.setOutlineColor(sf::Color::Red);
+	circle.setFillColor(sf::Color::White);
+	circle.setOutlineThickness(0);
 }
 
 Application::~Application()
@@ -120,17 +121,17 @@ void Application::updateInputs()
 void Application::update()
 {
 	// Handle standard systems
-	ecs->processSystems<s::Translation, s::EntityCollision>(DeltaTime);
+	//ecs->processSystems<s::>(DeltaTime);
 
 	// Handle extra systems
-	eps::checkBoundaryCollision(*ecs, window);
+	eps::BoidsAlgorithm(*ecs, DeltaTime, window);
 }
 
 void Application::render()
 {
 	window->clear();
 
-	eps::renderRectangle(*ecs, DeltaTime, window, rectangle);
+	eps::renderBoid(*ecs, DeltaTime, window, circle);
 
 	std::string s = "FPS " + std::to_string((int)FPS);
 	fps_text.setString(s);

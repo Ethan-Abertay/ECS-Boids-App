@@ -9,204 +9,209 @@ namespace c
 		Transform() = default;
 
 		sf::Vector2f position = sf::Vector2f(0.f, 0.f);
-		sf::Vector2f size = sf::Vector2f(80.f, 80.f);
 		sf::Vector2f velocity = sf::Vector2f(0.f, 0.f);
-		sf::Vector2f acceleration = sf::Vector2f(0.f, 0.f);
+		float radius = 0.f;
 	};
 
 	struct RenderData
 	{
 		RenderData() = default;
-
 	};
 }
 
 // s for systems
 namespace s
 {
-	struct Translation
-	{
-		static void process(ECS& ecs, float DeltaTime)
-		{
-			// Get relevent entities
-			auto entitiesWithComponents = ecs.getEntitiesWithComponents<c::Transform>();
 
-			// Loop through entities
-			for (auto& entityID : *entitiesWithComponents)
-			{
-				// Get this entity's components
-				auto* transform = ecs.getEntitysComponent<c::Transform>(entityID);
-
-				// Process this component
-				transform->velocity += transform->acceleration * DeltaTime;
-				transform->position += transform->velocity * DeltaTime;
-				//cout << position->position.x << endl;
-
-				//cout << "Vel " << transform->velocity.x << endl;
-			}
-		}
-	};
-
-	struct EntityCollision
-	{
-		static void postCollision(float& vel1, float& acc1, float& vel2, float& acc2)
-		{
-			// Handle vel and acc
-			if (vel1 * vel2 < 0)	// If travelling in opposite directions
-			{
-				vel1 *= -1.f;
-				acc1 *= -1.f;
-				vel2 *= -1.f;
-				acc2 *= -1.f;
-			}
-			else	// Travelling in the same direction
-			{
-				// Invert the greater velocity
-				if (abs(vel1) > abs(vel2))
-				{
-					vel1 *= -1.f;
-					acc1 *= -1.f;
-				}
-				else
-				{
-					vel2 *= -1.f;
-					acc2 *= -1.f;
-				}
-			}
-		}
-
-		static void handleCollision(c::Transform& transform1, c::Transform& transform2)
-		{
-			auto left1 = transform1.position.x;
-			auto right1 = left1 + transform1.size.x;
-			auto top1 = transform1.position.y;
-			auto bottom1 = top1 + transform1.size.y;
-			auto left2 = transform2.position.x;
-			auto right2 = left2 + transform2.size.x;
-			auto top2 = transform2.position.y;
-			auto bottom2 = top2 + transform2.size.y;
-
-			bool overlapX = (right1 > left2 && right1 < right2) || (left1 > left2 && left1 < right2) || (right2 > left1 && right2 < right1) || (left2 > left1 && left2 < right1);
-			bool overlapY = (bottom1 > top2 && bottom1 < bottom2) || (top1 > top2 && top1 < bottom2) || (bottom2 > top1 && bottom2 < bottom1) || (top2 > top1 && top2 < bottom1);
-
-			if (overlapX &&		// Collision X
-				overlapY)		// Collision Y
-			{
-				// These entities are colliding
-
-				// Displace 
-				auto offsetRight = abs(right1 - left2);
-				auto offsetLeft = abs(left1 - right2);
-				auto offsetTop = abs(top1 - bottom2);
-				auto offsetBottom = abs(bottom1 - top2);
-
-				// Determine which direction to bounce
-				bool collideRight = offsetRight < offsetLeft&& offsetRight < offsetTop&& offsetRight < offsetBottom;
-				bool collideLeft = offsetLeft < offsetRight&& offsetLeft < offsetTop&& offsetLeft < offsetBottom;
-				bool collideTop = offsetTop < offsetRight&& offsetTop < offsetLeft&& offsetTop < offsetBottom;
-				bool collideBottom = offsetBottom < offsetRight&& offsetBottom < offsetLeft&& offsetBottom < offsetTop;
-
-				//cout << "right " << collideRight << " left " << collideLeft << " top " << collideTop << " bottom " << collideBottom << endl;
-
-				if (collideRight)
-				{
-					// Move
-					transform1.position.x -= offsetRight / 2.f;
-					transform2.position.x += offsetRight / 2.f;
-
-					postCollision(transform1.velocity.x, transform1.acceleration.x, transform2.velocity.x, transform2.acceleration.x);
-				}
-				else if (collideLeft)
-				{
-					// Move
-					transform1.position.x -= offsetLeft / 2.f;
-					transform2.position.x += offsetLeft / 2.f;
-
-					postCollision(transform1.velocity.x, transform1.acceleration.x, transform2.velocity.x, transform2.acceleration.x);
-				}
-				else if (collideTop)
-				{
-					// Move
-					transform1.position.y -= offsetTop / 2.f;
-					transform2.position.y += offsetTop / 2.f;
-
-					postCollision(transform1.velocity.y, transform1.acceleration.y, transform2.velocity.y, transform2.acceleration.y);
-				}
-				else if (collideBottom)
-				{
-					// Move
-					transform1.position.y -= offsetBottom / 2.f;
-					transform2.position.y += offsetBottom / 2.f;
-
-					postCollision(transform1.velocity.y, transform1.acceleration.y, transform2.velocity.y, transform2.acceleration.y);
-				}
-			}
-		}
-
-		static void process(ECS& ecs, float DeltaTime)
-		{
-			//return;
-
-			// Get relevent entities
-			auto entitiesWithComponents = ecs.getEntitiesWithComponents<c::Transform>();
-
-			// Loop through entities
-			for (int i = 0; i < entitiesWithComponents->size(); ++i)
-			{
-				for (int j = i + 1; j < entitiesWithComponents->size(); ++j)
-				{
-					auto* transform1 = ecs.getEntitysComponent<c::Transform>(entitiesWithComponents->at(i));
-					auto* transform2 = ecs.getEntitysComponent<c::Transform>(entitiesWithComponents->at(j));
-
-					handleCollision(*transform1, *transform2);
-				}
-			}
-		}
-	};
 };
 
-// es for extra parameter systems
+// eps for extra parameter systems
 namespace eps
 {
-	static void checkBoundaryCollision(ECS& ecs, sf::RenderWindow* window)
+	static void BoidsAlgorithm(ECS& ecs, float DeltaTime, sf::RenderWindow* window)
 	{
-		// Lambda to handle boundaries
-		auto process = [](float* pos, float* vel, float* acc, const float width, const float size)
+		// A boid's velocity will be taken as their forward vector
+
+		// Boid const variables
+		const float maxSpeed = 200.f;
+		const float minSpeed = 100.f;
+		const float seperationDist = 20.f;
+		const float seperationDistSquared = seperationDist * seperationDist;
+		const float seperationVelocity = 20.f;
+		const float alingmentDist = 100.f;
+		const float alignmentDistSquared = alingmentDist * alingmentDist;
+		const float alignmentFactor = 0.05f;
+		const float coherenceFactor = 0.04f;
+		const float barrierAvoidanceRange = 20.f;
+		const float barrierAvoidanceVel = 20.f;
+
+		// Get relevent entities - visible to Lambdas
+		auto entitiesWithComponents = ecs.getEntitiesWithComponents<c::Transform>();
+
+		//// Helper lambdas
+		//auto getAngle = [&](const sf::Vector2f& a, const sf::Vector2f& b) -> float
+		//{
+		//	const float dot = a.x * b.x + a.y * b.y;
+		//	const float denominator = sqrtf(a.x * a.x + a.y * a.y) * sqrtf(b.x * b.x + b.y * b.y);
+		//	return acos(dot / denominator);
+		//};
+		//auto rotateVector = [&](sf::Vector2f vector, const float angle)
+		//{
+		//	auto og = vector;
+		//	vector.x = cosf(angle) * og.x - sinf(angle) * og.y;
+		//	vector.y = sinf(angle) * og.x + cosf(angle) * og.y;
+		//};
+
+		// Applies the velocity to the position
+		auto updatePositions = [&]()
 		{
-			if (*pos < 0)
+			for (auto& entityID : *entitiesWithComponents)
 			{
-				*pos = 0;
-				*vel *= -1.f;
-				*acc *= -1.f;
-			}
-			else if (*pos + width >= size)
-			{
-				*pos = size - width;
-				*vel *= -1.f;
-				*acc *= -1.f;
+				// Get component
+				auto& transform = *ecs.getEntitysComponent<c::Transform>(entityID);
+
+				// Process this component
+				transform.position += transform.velocity * DeltaTime;
 			}
 		};
 
-		// Get relevent entities
-		auto entitiesWithComponents = ecs.getEntitiesWithComponents<c::Transform, c::RenderData>();
+		// Runs the main boid algorithm
+		auto calculateBoid = [&](EntityID entityID)
+		{
+			// Get this boid's transform
+			auto thisTransform = ecs.getEntitysComponent<c::Transform>(entityID);
+
+			// Loop through all entities to get close entities - the largest distance away needed
+			std::vector<c::Transform*> closeEntities;
+			for (auto& otherID : *entitiesWithComponents)
+			{
+				// If not this
+				if (otherID == entityID)
+					continue;
+
+				// Get other transform
+				auto otherTransform = ecs.getEntitysComponent<c::Transform>(otherID);
+
+				// Test distance 
+				const float distanceSquared = powf((thisTransform->position.x - otherTransform->position.x), 2.f) + powf((thisTransform->position.y - otherTransform->position.y), 2.f);
+				if (distanceSquared <= alignmentDistSquared)
+				{
+					// Add to array
+					closeEntities.push_back(otherTransform);
+				}
+			}
+
+			// If there are no close boids, return
+			if (closeEntities.size() == 0)
+				return;
+
+			// Coherence - Boids will steer closer towards other boids
+			auto coherence = [&]() -> sf::Vector2f
+			{
+				sf::Vector2f averagePosition = sf::Vector2f(0.f, 0.f);
+				for (auto transform : closeEntities)
+				{
+					averagePosition += transform->position;
+				}
+				averagePosition /= (float)closeEntities.size();
+
+				return (averagePosition - thisTransform->position) * coherenceFactor;
+			};
+
+			// Seperation - Boids will steer away from other boids if they get too close
+			auto seperation = [&]() -> sf::Vector2f
+			{
+				auto seperate = [&](const float pos, const float otherPos, const float percent, float& vel)
+				{
+					const auto direction = pos < otherPos ? 1.f : -1.f;
+
+					vel -= seperationVelocity * percent * direction;
+				};
+
+				sf::Vector2f output = sf::Vector2f(0.f, 0.f);
+
+				// Loop through the close entities to find the boids that are within seperation distance
+				for (auto* otherTransform : closeEntities)
+				{
+					// Test distance 
+					const float distanceSquared = powf((thisTransform->position.x - otherTransform->position.x), 2.f) + powf((thisTransform->position.y - otherTransform->position.y), 2.f);
+					if (distanceSquared <= seperationDistSquared)
+					{
+						// Within distance to move away
+
+						const auto percent = 1.f - (distanceSquared / seperationDistSquared);
+						seperate(thisTransform->position.x, otherTransform->position.x, percent, output.x);
+						seperate(thisTransform->position.y, otherTransform->position.y, percent, output.y);
+
+						//output -= (otherTransform->position - thisTransform->position);
+					}
+				}
+
+				return output;
+			};
+
+			// Alignment - Boids modify their velocity magnitude and direction to match that of adjacent boids
+			auto alignment = [&]() -> sf::Vector2f
+			{
+				// Get average velocity and steer this velocity towards that. 
+
+				// Average velocity
+				sf::Vector2f averageVelocity = sf::Vector2f(0.f, 0.f);
+				for (auto transform : closeEntities)
+					averageVelocity += transform->velocity;
+				averageVelocity /= (float)closeEntities.size();
+
+				return (averageVelocity - thisTransform->velocity) * alignmentFactor;
+			};
+
+			// Barrier - Avoidance logic but with the edges of the window
+			auto barrier = [&]() -> sf::Vector2f
+			{
+				sf::Vector2f output = sf::Vector2f(0.f, 0.f);
+
+				auto testBorder = [&](float pos, float& vel, const float edge)
+				{
+					// Test left (in x's case)
+					if (pos <= barrierAvoidanceRange)
+						vel = barrierAvoidanceVel - pos;
+					// Test right (in x's case)
+					else if (pos >= edge - barrierAvoidanceRange)
+						vel = -(barrierAvoidanceVel - (edge - pos));
+				};
+
+				testBorder(thisTransform->position.x, output.x, window->getSize().x); // Test x
+				testBorder(thisTransform->position.y, output.y, window->getSize().y); // Test y
+
+				return (output);
+			};
+
+			auto coher_vel = coherence();
+			auto sep_vel = seperation();
+			auto align_vel = alignment();
+			auto barrier_vel = barrier();
+
+			// Add velocities
+			thisTransform->velocity = thisTransform->velocity + align_vel + sep_vel + coher_vel + barrier_vel;
+
+			// Clamp speeds
+			const auto speed = sqrtf((thisTransform->velocity.x * thisTransform->velocity.x) + (thisTransform->velocity.y * thisTransform->velocity.y));
+			if (speed > maxSpeed)
+				thisTransform->velocity *= maxSpeed / speed;
+			else if (speed < minSpeed)
+				thisTransform->velocity *= minSpeed / speed;
+		};
 
 		// Loop through entities
 		for (auto& entityID : *entitiesWithComponents)
 		{
-			// Get components
-			auto* transform = ecs.getEntitysComponent<c::Transform>(entityID);
-
-			// Get variables
-			auto* position = &transform->position;
-			auto* size = &transform->size;
-
-			// Process variables
-			process(&position->x, &transform->velocity.x, &transform->acceleration.x, size->x, window->getSize().x);
-			process(&position->y, &transform->velocity.y, &transform->acceleration.y, size->y, window->getSize().y);
+			calculateBoid(entityID);
 		}
+
+		// Finally, update positions
+		updatePositions();
 	}
 
-	static void renderRectangle(ECS& ecs, float DeltaTime, sf::RenderWindow* window, sf::RectangleShape& rectangle)
+	static void renderBoid(ECS& ecs, float DeltaTime, sf::RenderWindow* window, sf::CircleShape& circle)
 	{
 		auto entitiesWithComponents = ecs.getEntitiesWithComponents<c::RenderData>();
 
@@ -217,10 +222,10 @@ namespace eps
 			auto* renderData = ecs.getEntitysComponent<c::RenderData>(entityID);
 
 			// Process information
-			rectangle.setPosition(transform->position);
-			rectangle.setSize(transform->size);
+			circle.setPosition(transform->position);
+			circle.setRadius(transform->radius);
 
-			window->draw(rectangle);
+			window->draw(circle);
 		}
 	}
 };
