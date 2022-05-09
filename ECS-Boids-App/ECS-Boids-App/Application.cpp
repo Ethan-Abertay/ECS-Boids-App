@@ -7,7 +7,8 @@ Application::Application()
 	window = new sf::RenderWindow(sf::VideoMode(2560, 1440), "Collision App", sf::Style::Fullscreen);
 
 	// srand
-	srand(time(0));
+	//srand(time(0));
+	srand(0);
 
 	// Get Font and text
 	bool result = arialFont.loadFromFile("arial.ttf");
@@ -40,8 +41,7 @@ Application::Application()
 	for (int i = 0; i < 1000; ++i)
 	{
 		// Create entity - assign comps
-		auto id = ecs->createEntity();
-		ecs->assignComps<c::Transform, c::RenderData>(id);
+		auto id = ecs->init_CreateEntity<c::Transform, c::RenderData>();
 
 		// Randomise transform
 		auto* transform = ecs->getEntitysComponent<c::Transform>(id);
@@ -52,19 +52,11 @@ Application::Application()
 		//transform->size = sf::Vector2f(randRange(minSize, maxSize), randRange(minSize, maxSize));
 	}
 
-	//auto id = ecs->createEntity();
-	//ecs->assignComps<c::Transform, c::RenderData>(id);
-	//auto* transform = ecs->getEntitysComponent<c::Transform>(id);
-	//transform->position = sf::Vector2f(400-50, 0);
-	//transform->velocity = sf::Vector2f(0, -200);
-	//transform->size = sf::Vector2f(100, 50);
+#if IMPL == 3
 
-	//id = ecs->createEntity();
-	//ecs->assignComps<c::Transform, c::RenderData>(id);
-	//transform = ecs->getEntitysComponent<c::Transform>(id);
-	//transform->position = sf::Vector2f(400-25, 800);
-	//transform->velocity = sf::Vector2f(0, 200);
-	//transform->size = sf::Vector2f(50, 50);
+	ecs->performFullRefactor();
+
+#endif
 
 	// Create rectangle asset
 	circle.setOutlineColor(sf::Color::Red);

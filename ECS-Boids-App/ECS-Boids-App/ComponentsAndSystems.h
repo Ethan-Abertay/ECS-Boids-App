@@ -42,25 +42,11 @@ namespace eps
 		const float alignmentDistSquared = alingmentDist * alingmentDist;
 		const float alignmentFactor = 0.05f;
 		const float coherenceFactor = 0.04f;
-		const float barrierAvoidanceRange = 20.f;
-		const float barrierAvoidanceVel = 20.f;
+		const float barrierAvoidanceRange = 50.f;
+		const float barrierAvoidanceVel = 50.f;
 
 		// Get relevent entities - visible to Lambdas
 		auto entitiesWithComponents = ecs.getEntitiesWithComponents<c::Transform>();
-
-		//// Helper lambdas
-		//auto getAngle = [&](const sf::Vector2f& a, const sf::Vector2f& b) -> float
-		//{
-		//	const float dot = a.x * b.x + a.y * b.y;
-		//	const float denominator = sqrtf(a.x * a.x + a.y * a.y) * sqrtf(b.x * b.x + b.y * b.y);
-		//	return acos(dot / denominator);
-		//};
-		//auto rotateVector = [&](sf::Vector2f vector, const float angle)
-		//{
-		//	auto og = vector;
-		//	vector.x = cosf(angle) * og.x - sinf(angle) * og.y;
-		//	vector.y = sinf(angle) * og.x + cosf(angle) * og.y;
-		//};
 
 		// Applies the velocity to the position
 		auto updatePositions = [&]()
@@ -213,9 +199,7 @@ namespace eps
 
 	static void renderBoid(ECS& ecs, float DeltaTime, sf::RenderWindow* window, sf::CircleShape& circle)
 	{
-		auto entitiesWithComponents = ecs.getEntitiesWithComponents<c::RenderData>();
-
-		for (auto& entityID : *entitiesWithComponents)
+		auto render = [&](EntityID entityID)
 		{
 			// Get components
 			auto* transform = ecs.getEntitysComponent<c::Transform>(entityID);
@@ -226,6 +210,23 @@ namespace eps
 			circle.setRadius(transform->radius);
 
 			window->draw(circle);
+		};
+
+#if IMPL < 3
+
+		for (EntityID entityID = 0; entityID < ecs.getNoOfEntities(); entityID++)
+		{
+			render(entityID);
 		}
+
+#elif IMPL == 3
+
+		for (auto group : ecs.getEntityGroups())
+		{
+			for (int i = group->startIndex; i < group->getNextIndex(); i++)
+				render(i);
+		}
+
+#endif
 	}
 };
