@@ -73,6 +73,9 @@ Application::~Application()
 
 void Application::run()
 {
+	// Length of time to run test in seconds
+	float totalTime = 0.f;
+
 	while (window->isOpen())
 	{
 		// Record start time
@@ -89,6 +92,26 @@ void Application::run()
 
 		// Calculate fps
 		FPS = 1.f / DeltaTime;
+
+		// Add to total time
+		totalTime += DeltaTime;
+
+		// Add delta time to record
+		deltaTimes.push_back(std::pair(DeltaTime, totalTime));
+
+		// Test if done (15 seconds)
+		if (totalTime >= 15.f)
+		{
+			// Record output
+			std::ofstream file;
+			file.open("Output.csv");
+			for (auto& f : deltaTimes)
+				file << f.first << ',' << f.second << std::endl;
+			file.close();
+
+			// Close window (hence application)
+			window->close();
+		}
 
 		//std::cout << "DeltaTime " << DeltaTime << " FPS " << FPS << std::endl;
 	}

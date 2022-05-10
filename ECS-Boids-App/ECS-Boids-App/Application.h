@@ -4,6 +4,7 @@
 #include <chrono>
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
+#include <fstream>
 
 #include "SFML/Graphics.hpp"
 #include "../../../ECS-Library/ECS/ECS/ECS.h"
@@ -33,6 +34,7 @@ private:
 	sf::Font arialFont;
 
 	// Variables
+	std::vector<std::pair<float, float>> deltaTimes;	// first element is delta time, second element is the total time expired when this frame was called
 	float DeltaTime = 0.f;
 	float FPS = 0.f;
 };
