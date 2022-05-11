@@ -106,7 +106,7 @@ void Application::run()
 			std::ofstream file;
 			file.open("Output.csv");
 			for (auto& f : deltaTimes)
-				file << f.first << ',' << f.second << std::endl;
+				file << f.second << ',' << f.first << std::endl;
 			file.close();
 
 			// Close window (hence application)
